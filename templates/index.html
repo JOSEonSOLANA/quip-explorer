@@ -549,10 +549,15 @@ async function pollExplorerWallet(addr) {
     if (existing) { existing.outerHTML = h; } else if (h) { container.insertAdjacentHTML('afterbegin', h); }
     if (cache.transactions && cache.transactions.length > 0) {
       const txs = [...cache.transactions].reverse();
-      const existingFilter = container.querySelector('.tx-filter');
-      const existingScroll = container.querySelector('.tx-scroll');
-      if (existingFilter) existingFilter.outerHTML = renderTxFilter(txs);
-      if (existingScroll) existingScroll.outerHTML = renderTxList(txs);
+      let existingSection = container.querySelector('.section-title');
+      if (!existingSection) {
+        container.insertAdjacentHTML('beforeend', '<div class="section-title">Transaction History</div>' + renderTxFilter(txs) + renderTxList(txs));
+      } else {
+        const existingFilter = container.querySelector('.tx-filter');
+        const existingScroll = container.querySelector('.tx-scroll');
+        if (existingFilter) existingFilter.outerHTML = renderTxFilter(txs);
+        if (existingScroll) existingScroll.outerHTML = renderTxList(txs);
+      }
     }
     if (cache.status === 'complete' || cache.status === 'error') {
       clearInterval(pollTimer); pollTimer = null;
