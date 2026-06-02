@@ -374,6 +374,7 @@ def api_wallet(address):
             if not cache or not cache.get("status"):
                 need_scan = True
                 cache = {"status": "starting", "progress": 0, "scanned": 0, "total": current_block, "events": [], "transactions": [], "last_scanned": 0}
+                save_cache(address, cache)
             elif cache.get("status") == "complete" and cache.get("last_scanned", 0) < current_block:
                 need_scan = True
                 cache["status"] = "resuming"
