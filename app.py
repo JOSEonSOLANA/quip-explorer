@@ -88,7 +88,9 @@ def get_events_for_block(substrate, block_num, address):
 def group_events_into_transactions(raw_events):
     groups = {}
     for ev in raw_events:
-        key = (ev["block"], ev["extrinsic_index"])
+        ext_idx = ev.get("extrinsic_index", -1)
+        if ext_idx is None: ext_idx = -1
+        key = (ev["block"], ext_idx)
         if key not in groups:
             groups[key] = []
         groups[key].append(ev)
@@ -105,8 +107,10 @@ def group_events_into_transactions(raw_events):
         sub = []
 
         for ev in evts:
-            sub.append({"module_id": ev["raw_module"], "event_id": ev["raw_event"], "attributes": ev["attributes"]})
-            m = ev["raw_module"]; e = ev["raw_event"]
+            raw_mod = ev.get("raw_module", ev.get("type", "").split(".")[0] if "." in ev.get("type", "") else ev.get("type", ""))
+            raw_evt = ev.get("raw_event", "")
+            sub.append({"module_id": raw_mod, "event_id": raw_evt, "attributes": ev.get("attributes", {})})
+            m = raw_mod; e = raw_evt
             if m == "Balances" and e == "Deposit":
                 amt = ev.get("amount") or 0
                 net += abs(amt); has_balance_change = True
