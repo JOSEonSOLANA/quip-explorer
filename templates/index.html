@@ -533,7 +533,7 @@ async function showExplorerWallet(address) {
     document.getElementById('blockDetailContainer').innerHTML = h;
     if (cache.status === 'scanning' || cache.status === 'starting' || cache.status === 'resuming') {
       if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
-      pollTimer = setInterval(() => pollExplorerWallet(address), 2000);
+      pollTimer = setInterval(() => pollExplorerWallet(address), 4000);
     }
   } catch (e) { showExplorerError(e.message); }
 }
@@ -554,9 +554,19 @@ async function pollExplorerWallet(addr) {
         container.insertAdjacentHTML('beforeend', '<div class="section-title">Transaction History</div>' + renderTxFilter(txs) + renderTxList(txs));
       } else if (existingScroll.dataset.txcount != cache.transactions.length) {
         existingScroll.dataset.txcount = cache.transactions.length;
+        var openEls = container.querySelectorAll('.sub-events.open');
+        var openIds = [];
+        openEls.forEach(function(el) { openIds.push(el.id); });
+        var scrollTop = existingScroll.scrollTop;
         const existingFilter = container.querySelector('.tx-filter');
         if (existingFilter) existingFilter.outerHTML = renderTxFilter(txs);
         existingScroll.outerHTML = renderTxList(txs);
+        var newScroll = container.querySelector('.tx-scroll');
+        if (newScroll) { newScroll.scrollTop = scrollTop; }
+        openIds.forEach(function(id) {
+          var el = document.getElementById(id);
+          if (el) el.classList.add('open');
+        });
       }
     }
     if (cache.status === 'complete' || cache.status === 'error') {
