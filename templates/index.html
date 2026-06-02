@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quip Explorer</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0d1117; color: #c9d1d9; padding: 24px; max-width: 1200px; margin: 0 auto; }
+  h1 { color: #58a6ff; font-size: 22px; }
+  .tabs { display: flex; gap: 0; margin: 0 0 16px 0; background: #161b22; border-radius: 8px; overflow: hidden; border: 1px solid #30363d; }
+  .tab-btn { padding: 10px 24px; background: transparent; border: none; color: #8b949e; font-size: 14px; cursor: pointer; font-weight: 500; transition: all 0.15s; }
+  .tab-btn:hover { color: #c9d1d9; background: #1c2128; }
+  .tab-btn.active { background: #1f6feb22; color: #58a6ff; border-bottom: 2px solid #58a6ff; }
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+  .search-box { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+  .search-box input { flex: 1; min-width: 250px; padding: 10px 14px; background: #161b22; border: 1px solid #30363d; border-radius: 6px; color: #c9d1d9; font-size: 14px; font-family: monospace; }
+  .search-box input:focus { outline: none; border-color: #58a6ff; }
+  .search-box button { padding: 10px 20px; background: #238636; border: none; border-radius: 6px; color: #fff; font-size: 14px; cursor: pointer; font-weight: 600; }
+  .search-box button:hover { background: #2ea043; }
+  .error { background: #3b1a1a; border: 1px solid #f85149; color: #f85149; padding: 12px; border-radius: 6px; margin-bottom: 16px; display: none; }
+  .card { background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 20px; margin-bottom: 16px; }
+  .card .address { font-size: 12px; color: #8b949e; font-family: monospace; word-break: break-all; margin-bottom: 12px; }
+  .balance-row { display: flex; align-items: baseline; gap: 12px; margin-bottom: 12px; }
+  .balance-big { font-size: 32px; font-weight: 700; color: #3fb950; font-family: monospace; }
+  .balance-label { color: #8b949e; font-size: 13px; }
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px; }
+  .stat { background: #0d1117; border-radius: 6px; padding: 10px; }
+  .stat .label { color: #8b949e; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .stat .value { font-size: 15px; font-weight: 600; font-family: monospace; margin-top: 2px; }
+  .stat .value.blue { color: #58a6ff; }
+  .stat .value.gold { color: #d29922; }
+  .stat .value.silver { color: #8b949e; }
+  .stat .value.bronze { color: #a371f7; }
+  .stat .value.green { color: #3fb950; }
+  table { width: 100%; border-collapse: collapse; }
+  th { text-align: left; color: #8b949e; font-size: 11px; text-transform: uppercase; padding: 10px 8px; border-bottom: 1px solid #30363d; white-space: nowrap; }
+  td { padding: 10px 8px; border-bottom: 1px solid #21262d; font-size: 12px; font-family: monospace; }
+  tr:hover td { background: #1c2128; }
+  td .tag { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 10px; font-weight: 600; text-transform: uppercase; }
+  td .tag.mining { background: #1f6feb33; color: #58a6ff; }
+  td .tag.faucet { background: #23863633; color: #3fb950; }
+  td .tag.transfer { background: #9e6a0333; color: #d29922; }
+  td .tag.deposit { background: #23863633; color: #3fb950; }
+  td .tag.block_winner { background: #6f42c133; color: #a371f7; }
+  td .tag.fee { background: #f8514933; color: #f85149; }
+  td .tag.remark { background: #8b949e33; color: #8b949e; }
+  td .tag.info { background: #8b949e33; color: #8b949e; }
+  td .tag.success { background: #23863633; color: #3fb950; }
+  td .tag.fail { background: #f8514933; color: #f85149; }
+  td .incoming { color: #3fb950; }
+  td .outgoing { color: #f85149; }
+  td .date { font-size: 11px; color: #8b949e; white-space: nowrap; }
+  td .rank-num { font-weight: 700; }
+  td .clickable { color: #58a6ff; cursor: pointer; text-decoration: underline; text-decoration-style: dotted; }
+  td .clickable:hover { color: #79c0ff; }
+  .gold { color: #d29922; }
+  .silver { color: #8b949e; }
+  .bronze { color: #a371f7; }
+  .loading { text-align: center; padding: 40px; color: #8b949e; }
+  .loading .spinner { display: inline-block; width: 24px; height: 24px; border: 2px solid #30363d; border-top-color: #58a6ff; border-radius: 50%; animation: spin 0.8s linear infinite; margin-bottom: 12px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .block-info { color: #8b949e; font-size: 13px; margin-bottom: 8px; }
+  .empty { text-align: center; padding: 24px; color: #8b949e; font-size: 13px; }
+  .summary-row { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 16px; padding: 12px; background: #0d1117; border-radius: 8px; }
+  .summary-item { text-align: center; min-width: 80px; }
+  .summary-item .num { font-size: 20px; font-weight: 700; font-family: monospace; }
+  .summary-item .lbl { font-size: 10px; color: #8b949e; text-transform: uppercase; }
+  .progress-card { background: #161b22; border: 1px solid #1f6feb; border-radius: 8px; padding: 20px; margin-bottom: 16px; }
+  .progress-card .pct { font-size: 14px; color: #58a6ff; margin-bottom: 8px; }
+  .progress-bg { background: #21262d; border-radius: 10px; height: 12px; overflow: hidden; }
+  .progress-fill { background: linear-gradient(90deg, #1f6feb, #58a6ff); height: 100%; border-radius: 10px; transition: width 1s ease; }
+  .progress-info { display: flex; justify-content: space-between; margin-top: 6px; font-size: 11px; color: #8b949e; }
+  .progress-info .events { color: #3fb950; }
+  .section-title { color: #58a6ff; font-size: 16px; margin: 20px 0 12px 0; }
+  .toggle-link { color: #8b949e; font-size: 12px; cursor: pointer; margin-left: 8px; }
+  .toggle-link:hover { color: #58a6ff; }
+  .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+  .header h1 { margin-bottom: 0; }
+  .note-btn { background: none; border: 1px solid #30363d; color: #8b949e; padding: 6px 14px; border-radius: 6px; font-size: 12px; cursor: pointer; }
+  .note-btn:hover { border-color: #58a6ff; color: #58a6ff; }
+  .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 100; }
+  .modal { position: fixed; top: 50%; left: 50%; transform: translate(-50%,-50%); background: #161b22; border: 1px solid #30363d; border-radius: 12px; padding: 28px; max-width: 520px; width: 90%; z-index: 101; max-height: 80vh; overflow-y: auto; }
+  .modal h2 { color: #58a6ff; font-size: 16px; margin-bottom: 16px; }
+  .modal p { color: #c9d1d9; font-size: 13px; line-height: 1.6; margin-bottom: 12px; }
+  .modal-close { float: right; background: none; border: none; color: #8b949e; font-size: 20px; cursor: pointer; }
+  .modal-close:hover { color: #f85149; }
+  .status-bar { display: flex; gap: 16px; margin-bottom: 16px; flex-wrap: wrap; }
+  .status-item { background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 12px 18px; flex: 1; min-width: 140px; }
+  .status-item .lbl { color: #8b949e; font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .status-item .val { color: #58a6ff; font-size: 16px; font-weight: 700; font-family: monospace; margin-top: 4px; }
+  .block-header-card { margin-bottom: 16px; }
+  .block-header-card .row { display: flex; gap: 8px; margin-bottom: 6px; font-size: 12px; font-family: monospace; }
+  .block-header-card .row .key { color: #8b949e; min-width: 120px; }
+  .block-header-card .row .val { color: #c9d1d9; word-break: break-all; }
+  .nav-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+  .nav-bar .nav-btn { padding: 6px 14px; background: #21262d; border: 1px solid #30363d; border-radius: 6px; color: #c9d1d9; cursor: pointer; font-size: 12px; font-family: monospace; }
+  .nav-bar .nav-btn:hover { border-color: #58a6ff; color: #58a6ff; }
+  .nav-bar .nav-btn:disabled { opacity: 0.4; cursor: default; }
+  .nav-bar .nav-title { font-size: 14px; color: #58a6ff; font-weight: 600; }
+  .hash-trunc { max-width: 120px; display: inline-block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: middle; }
+  .attr-panel { background: #0d1117; border-radius: 6px; padding: 8px 12px; margin-top: 4px; font-size: 11px; font-family: monospace; overflow-x: auto; max-height: 200px; overflow-y: auto; }
+  .attr-panel pre { margin: 0; color: #8b949e; white-space: pre-wrap; word-break: break-all; }
+  .sub-section-title { color: #8b949e; font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin: 16px 0 8px 0; }
+  .tx-row { display: flex; align-items: center; gap: 12px; padding: 14px 12px; background: #161b22; border: 1px solid #21262d; border-radius: 8px; margin-bottom: 6px; transition: border-color 0.15s; }
+  .tx-row:hover { border-color: #30363d; }
+  .tx-row.hidden { display: none; }
+  .tx-icon { font-size: 18px; font-weight: 700; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: 50%; background: #0d1117; flex-shrink: 0; }
+  .tx-icon.incoming { color: #3fb950; background: #23863622; }
+  .tx-icon.outgoing { color: #f85149; background: #f8514922; }
+  .tx-icon.info { color: #8b949e; background: #8b949e22; }
+  .tx-main { flex: 1; min-width: 0; }
+  .tx-top { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; flex-wrap: wrap; }
+  .tx-bottom { display: flex; align-items: center; gap: 12px; }
+  .tx-amount { font-family: monospace; font-size: 14px; font-weight: 700; white-space: nowrap; flex-shrink: 0; }
+  .tx-amount.incoming { color: #3fb950; }
+  .tx-amount.outgoing { color: #f85149; }
+  .tx-counterparty { font-size: 11px; color: #8b949e; }
+  .tx-counterparty.from { color: #3fb950; }
+  .tx-counterparty.to { color: #f85149; }
+  .tx-counterparty .clickable { font-family: monospace; font-size: 11px; }
+  .tx-block { font-size: 10px; color: #58a6ff; cursor: pointer; font-family: monospace; }
+  .tx-block:hover { text-decoration: underline; }
+  .tx-filter { display: flex; gap: 6px; margin-bottom: 12px; flex-wrap: wrap; }
+  .tx-filter-btn { padding: 5px 12px; background: #0d1117; border: 1px solid #30363d; border-radius: 14px; color: #8b949e; font-size: 11px; cursor: pointer; font-weight: 500; transition: all 0.15s; }
+  .tx-filter-btn:hover { border-color: #58a6ff; color: #c9d1d9; }
+  .tx-filter-btn.active { background: #1f6feb33; border-color: #58a6ff; color: #58a6ff; }
+  .tx-scroll { max-height: 600px; overflow-y: auto; padding-right: 4px; }
+  .tx-scroll::-webkit-scrollbar { width: 6px; }
+  .tx-scroll::-webkit-scrollbar-track { background: #0d1117; border-radius: 3px; }
+  .tx-scroll::-webkit-scrollbar-thumb { background: #30363d; border-radius: 3px; }
+  .tx-scroll::-webkit-scrollbar-thumb:hover { background: #484f58; }
+  .sub-toggle { font-size: 10px; color: #8b949e; cursor: pointer; margin-left: 4px; user-select: none; }
+  .sub-toggle:hover { color: #58a6ff; }
+  .sub-events { display: none; margin-top: 6px; padding: 6px 8px; background: #0d1117; border-radius: 6px; font-size: 10px; }
+  .sub-events.open { display: block; }
+  .sub-event-row { padding: 3px 0; color: #8b949e; font-family: monospace; font-size: 10px; border-bottom: 1px solid #21262d; }
+  .sub-event-row:last-child { border-bottom: none; }
+  .sub-event-row .sev-mod { color: #58a6ff; }
+  .sub-event-row .sev-evt { color: #d29922; }
+</style>
+</head>
+<body>
+<div class="header">
+  <h1>Quip Explorer</h1>
+  <button class="note-btn" onclick="showNote()">NOTE</button>
+</div>
+<div class="modal-overlay" id="noteOverlay" onclick="hideNote()">
+  <div class="modal" onclick="event.stopPropagation()">
+    <button class="modal-close" onclick="hideNote()">&times;</button>
+    <h2>About Quip Explorer</h2>
+    <p>This explorer queries the Quip Testnet via a public bootnode RPC endpoint.</p>
+    <p><strong>Wallet Explorer</strong> — search SS58 addresses to view balance and full transaction history. A background scan from block 1 to the latest block runs progressively, showing results as they are found.</p>
+    <p><strong>Block Explorer</strong> — browse recent blocks, view extrinsics and events. Click a block number to see its details, extrinsics, and events.</p>
+    <p>Chain: <strong>Quip Testnet</strong> (tQUIP, 12 decimals, SS58 prefix 42)</p>
+  </div>
+</div>
+<script>
+function showNote() { document.getElementById('noteOverlay').style.display = 'block'; }
+function hideNote() { document.getElementById('noteOverlay').style.display = 'none'; }
+</script>
+
+<div class="tabs">
+  <button class="tab-btn active" onclick="switchTab('wallet')" id="tabWallet">Wallet Explorer</button>
+  <button class="tab-btn" onclick="switchTab('explorer')" id="tabExplorer">Block Explorer</button>
+</div>
+
+<div class="tab-content active" id="contentWallet">
+  <div class="search-box">
+    <input type="text" id="addressInput" placeholder="Enter SS58 address" spellcheck="false">
+    <button onclick="searchWallet()">Search</button>
+  </div>
+  <div id="walletBlockInfo" class="block-info"></div>
+  <div class="error" id="walletError"></div>
+  <div id="progressContainer"></div>
+  <div id="walletLoading" class="loading" style="display:none"><div class="spinner"></div><div>Loading balance...</div></div>
+  <div id="walletResult"></div>
+</div>
+
+<div class="tab-content" id="contentExplorer">
+  <div class="search-box">
+    <input type="text" id="explorerSearchInput" placeholder="Block number, address, or hash (0x...)" spellcheck="false" style="flex:2;min-width:200px">
+    <button onclick="explorerSearch()">Search</button>
+    <input type="text" id="jumpToBlock" placeholder="Jump to block #" spellcheck="false" style="flex:0.5;min-width:100px;max-width:140px;font-family:monospace">
+    <button onclick="jumpToBlock()" style="background:#1f6feb">Go</button>
+  </div>
+  <div class="error" id="explorerError"></div>
+  <div id="statusBar"></div>
+  <div id="blockListContainer"></div>
+  <div id="blockDetailContainer"></div>
+</div>
+
+<script>
+let pollTimer = null;
+let lastWalletData = null;
+
+function shortAddr(addr) { return addr ? addr.slice(0,6) + '...' + addr.slice(-4) : ''; }
+function fmtDate(ts) { return ts ? new Date(ts * 1000).toLocaleDateString() + ' ' + new Date(ts * 1000).toLocaleTimeString() : ''; }
+function fmtHash(h) { return h ? h.slice(0,10) + '...' + h.slice(-6) : ''; }
+function tagClass(t) { return {mining:'mining',faucet:'faucet',transfer:'transfer',deposit:'deposit',block_winner:'block_winner',fee:'fee',remark:'remark'}[t]||'info'; }
+function tagLabel(t) { return {mining:'Mining',faucet:'Faucet',transfer:'Transfer',deposit:'Deposit',block_winner:'Winner',fee:'Fee',remark:'Remark'}[t]||t.replace(/^(Balances|System|QuantumPow|TransactionPayment)\./,''); }
+// ----- Tab Switching -----
+function switchTab(name) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+  document.getElementById('tab' + name.charAt(0).toUpperCase() + name.slice(1)).classList.add('active');
+  document.getElementById('content' + name.charAt(0).toUpperCase() + name.slice(1)).classList.add('active');
+  if (name === 'explorer') loadExplorer();
+}
+
+// ===== WALLET EXPLORER =====
+function renderTxIcon(subtype) {
+  if (subtype === 'incoming') return '↓';
+  if (subtype === 'outgoing') return '↑';
+  return '·';
+}
+
+function renderTxRow(e) {
+  const direction = renderTxIcon(e.subtype);
+  const cls = e.subtype === 'incoming' ? 'incoming' : e.subtype === 'outgoing' ? 'outgoing' : 'info';
+  const sign = e.subtype === 'incoming' ? '+' : e.subtype === 'outgoing' ? '-' : '';
+  const val = e.amount != null && e.amount !== false ? e.amount : null;
+  const cp = e.counterparty || null;
+  const hasSub = e.sub_events && e.sub_events.length > 0;
+  const tid = 'sub-' + e.block + '-' + (e.extrinsic_index != null ? e.extrinsic_index : 0);
+  return '<div class="tx-row" data-type="' + e.type + '">'
+    + '<div class="tx-icon ' + cls + '">' + direction + '</div>'
+    + '<div class="tx-main">'
+    + '<div class="tx-top">'
+    + '<span class="tag ' + tagClass(e.type) + '">' + tagLabel(e.type) + '</span>'
+    + (hasSub ? '<span class="sub-toggle" onclick="event.stopPropagation();toggleSub(\'' + tid + '\')">[+]</span>' : '')
+    + (cp ? '<span class="tx-counterparty ' + (e.subtype === 'incoming' ? 'from' : 'to') + '">'
+      + (e.subtype === 'incoming' ? 'From: ' : 'To: ')
+      + '<span class="clickable" onclick="searchAddress(\'' + cp + '\')">' + shortAddr(cp) + '</span></span>' : '')
+    + '</div>'
+    + '<div class="tx-bottom">'
+    + '<span class="date">' + fmtDate(e.ts) + '</span>'
+    + '<span class="tx-block" onclick="goToBlock(' + e.block + ')">#' + e.block + '</span>'
+    + '</div>'
+    + (hasSub ? '<div class="sub-events" id="' + tid + '">' + e.sub_events.map(s => '<div class="sub-event-row"><span class="sev-mod">' + s.module_id + '</span>.<span class="sev-evt">' + s.event_id + '</span></div>').join('') + '</div>' : '')
+    + '</div>'
+    + '<div class="tx-amount ' + cls + '">' + sign + (val !== null ? val.toFixed(4) : '') + (val !== null ? ' QUIP' : '') + '</div>'
+    + '</div>';
+}
+
+function toggleSub(id) { var el = document.getElementById(id); if (el) el.classList.toggle('open'); }
+
+function renderTxFilter(events) {
+  let h = '<div class="tx-filter">';
+  h += '<button class="tx-filter-btn active" data-filter="all" onclick="filterTxs(\'all\')">All</button>';
+  const types = {};
+  for (const e of events) types[e.type] = (types[e.type] || 0) + 1;
+  const order = ['transfer', 'mining', 'faucet', 'fee', 'deposit', 'block_winner', 'remark'];
+  for (const t of order) {
+    if (types[t]) h += '<button class="tx-filter-btn" data-filter="' + t + '" onclick="filterTxs(\'' + t + '\')">' + tagLabel(t) + ' (' + types[t] + ')</button>';
+  }
+  for (const t in types) {
+    if (!order.includes(t)) h += '<button class="tx-filter-btn" data-filter="' + t + '" onclick="filterTxs(\'' + t + '\')">' + t + ' (' + types[t] + ')</button>';
+  }
+  h += '</div>';
+  return h;
+}
+
+function filterTxs(type) {
+  document.querySelectorAll('.tx-filter-btn').forEach(b => b.classList.remove('active'));
+  document.querySelector('.tx-filter-btn[data-filter="' + type + '"]').classList.add('active');
+  document.querySelectorAll('.tx-row').forEach(r => {
+    r.classList.toggle('hidden', type !== 'all' && r.dataset.type !== type);
+  });
+}
+
+function renderTxList(events) {
+  if (events.length === 0) return '<div class="empty">No activity found</div>';
+  return '<div class="tx-scroll">' + events.map(e => renderTxRow(e)).join('') + '</div>';
+}
+
+function renderWalletView(data) {
+  let h = '<div class="card"><div class="address">' + data.address + '</div>';
+  h += '<div class="balance-row"><span class="balance-big">' + data.free.toFixed(4) + '</span><span class="balance-label">QUIP</span></div>';
+  h += '<div class="stats">';
+  h += '<div class="stat"><div class="label">Total</div><div class="value blue">' + data.total.toFixed(4) + ' QUIP</div></div>';
+  h += '<div class="stat"><div class="label">Reserved</div><div class="value blue">' + data.reserved.toFixed(4) + ' QUIP</div></div>';
+  h += '<div class="stat"><div class="label">Nonce</div><div class="value blue">' + data.nonce + '</div></div>';
+  h += '<div class="stat"><div class="label">Transactions</div><div class="value blue">' + (data.cache && data.cache.transactions ? data.cache.transactions.length : 0) + '</div></div>';
+  h += '</div></div>';
+  const txs = data.cache && data.cache.transactions ? [...data.cache.transactions].reverse() : [];
+  if (txs.length > 0) {
+    h += '<div class="section-title">Transaction History</div>';
+    h += '<div id="txFilterContainer">' + renderTxFilter(txs) + '</div>';
+    h += '<div id="txListContainer">' + renderTxList(txs) + '</div>';
+  } else if (data.cache && data.cache.status === 'complete') {
+    h += '<div class="empty">No transactions found for this address</div>';
+  }
+  return h;
+}
+
+function renderWalletProgress(cache) {
+  if (!cache || !cache.status) return '';
+  const txCount = cache.transactions ? cache.transactions.length : 0;
+  if (cache.status === 'complete') return '<div class="progress-card"><div class="pct">Scan complete &mdash; ' + txCount + ' transactions</div><div class="progress-bg"><div class="progress-fill" style="width:100%"></div></div></div>';
+  if (cache.status === 'error') return '<div class="progress-card"><div style="color:#f85149">Error: ' + (cache.error||'unknown') + '</div></div>';
+  const pct = cache.progress || 0;
+  return '<div class="progress-card"><div class="pct">Scanning: ' + pct + '%</div><div class="progress-bg"><div class="progress-fill" style="width:' + pct + '%"></div></div>'
+    + '<div class="progress-info"><span>' + (cache.scanned||0) + ' / ' + (cache.total||0) + ' blocks</span><span class="events">' + txCount + ' transactions found</span></div></div>';
+}
+
+async function pollWalletStatus(addr) {
+  try {
+    const resp = await fetch('/api/scan-status/' + encodeURIComponent(addr));
+    const cache = await resp.json();
+    document.getElementById('progressContainer').innerHTML = renderWalletProgress(cache);
+    if (lastWalletData) {
+      const data = JSON.parse(JSON.stringify(lastWalletData));
+      data.cache = cache;
+      document.getElementById('walletResult').innerHTML = renderWalletView(data);
+    }
+    if (cache.status === 'complete' || cache.status === 'error') {
+      clearInterval(pollTimer); pollTimer = null;
+    }
+  } catch(e) { console.log(e); }
+}
+
+async function searchWallet() {
+  const addr = document.getElementById('addressInput').value.trim();
+  if (!addr) return;
+  document.getElementById('walletError').style.display = 'none';
+  document.getElementById('walletResult').innerHTML = '';
+  document.getElementById('walletBlockInfo').textContent = '';
+  document.getElementById('progressContainer').innerHTML = '';
+  if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+  document.getElementById('walletLoading').style.display = 'block';
+  try {
+    const resp = await fetch('/api/wallet/' + encodeURIComponent(addr));
+    const data = await resp.json();
+    document.getElementById('walletLoading').style.display = 'none';
+    if (data.error) { document.getElementById('walletError').textContent = data.error; document.getElementById('walletError').style.display = 'block'; return; }
+    document.getElementById('walletBlockInfo').textContent = 'Block: ' + data.block;
+    lastWalletData = data;
+    document.getElementById('walletResult').innerHTML = renderWalletView(data);
+  } catch (e) {
+    document.getElementById('walletLoading').style.display = 'none';
+    document.getElementById('walletError').textContent = 'Error: ' + e.message;
+    document.getElementById('walletError').style.display = 'block';
+  }
+}
+document.getElementById('addressInput').addEventListener('keydown', e => { if (e.key === 'Enter') searchWallet(); });
+
+// ===== BLOCK EXPLORER =====
+let currentBlocks = [];
+let currentBlockFrom = 0;
+let explorerLatestBlock = 0;
+
+async function loadExplorer() {
+  try {
+    const resp = await fetch('/api/explorer/status');
+    const status = await resp.json();
+    if (status.error) { showExplorerError(status.error); return; }
+    explorerLatestBlock = status.finalised_block;
+    let h = '<div class="status-bar">';
+    h += '<div class="status-item"><div class="lbl">Chain</div><div class="val">' + (status.chain || status.name || 'Quip') + '</div></div>';
+    h += '<div class="status-item"><div class="lbl">Latest Block</div><div class="val">#' + status.finalised_block.toLocaleString() + '</div></div>';
+    h += '</div>';
+    document.getElementById('statusBar').innerHTML = h;
+    loadBlocks(explorerLatestBlock);
+  } catch (e) { showExplorerError(e.message); }
+}
+
+function showExplorerError(msg) {
+  const el = document.getElementById('explorerError');
+  el.textContent = msg; el.style.display = 'block';
+}
+
+async function loadBlocks(fromBlock) {
+  const container = document.getElementById('blockListContainer');
+  const limit = 15;
+  container.innerHTML = '<div class="loading"><div class="spinner"></div><div>Loading blocks...</div></div>';
+  try {
+    const resp = await fetch('/api/explorer/blocks?from=' + fromBlock + '&limit=' + limit);
+    const data = await resp.json();
+    if (data.error) { container.innerHTML = '<div class="error">' + data.error + '</div>'; return; }
+    currentBlocks = data.blocks;
+    currentBlockFrom = data.blocks.length > 0 ? data.blocks[data.blocks.length - 1].number : 0;
+    let h = '<div class="nav-bar">';
+    if (fromBlock < explorerLatestBlock) h += '<button class="nav-btn" onclick="loadBlocks(' + explorerLatestBlock + ')">Latest</button>';
+    else h += '<button class="nav-btn" disabled>Latest</button>';
+    h += '<div class="nav-title">Recent Blocks</div>';
+    if (currentBlockFrom > 1) h += '<button class="nav-btn" onclick="loadOlder()">Older &darr;</button>';
+    else h += '<button class="nav-btn" disabled>Older</button>';
+    h += '</div>';
+    h += '<div class="card" style="overflow-x:auto;padding:0"><table><tr><th>Block</th><th>Hash</th><th>Time</th><th>Extrinsics</th><th>Events</th><th>Miner</th></tr>';
+    for (const b of data.blocks) {
+      h += '<tr><td class="clickable" onclick="showBlockDetail(' + b.number + ')">#' + b.number + '</td>'
+        + '<td><span class="hash-trunc" title="' + b.hash + '">' + fmtHash(b.hash) + '</span></td>'
+        + '<td class="date">' + fmtDate(b.timestamp) + '</td>'
+        + '<td>' + b.extrinsic_count + '</td><td>' + b.event_count + '</td>'
+        + '<td>' + (b.author ? shortAddr(b.author) : '-') + '</td></tr>';
+    }
+    h += '</table></div>';
+    container.innerHTML = h;
+  } catch (e) { container.innerHTML = '<div class="error">' + e.message + '</div>'; }
+}
+
+function loadOlder() {
+  if (currentBlockFrom > 1) loadBlocks(currentBlockFrom - 1);
+}
+
+let currentBlockDetail = null;
+
+async function showBlockDetail(num) {
+  const container = document.getElementById('blockDetailContainer');
+  container.innerHTML = '<div class="loading"><div class="spinner"></div><div>Loading block #' + num + '...</div></div>';
+  try {
+    const resp = await fetch('/api/explorer/block/' + num);
+    const data = await resp.json();
+    if (data.error) { container.innerHTML = '<div class="error">' + data.error + '</div>'; return; }
+    currentBlockDetail = data;
+    let h = '<div class="card block-header-card">';
+    h += '<div class="nav-bar">';
+    h += '<div><button class="nav-btn" onclick="closeBlockDetail()">&larr; Back</button>';
+    h += '<button class="nav-btn" onclick="showBlockDetail(' + (data.number - 1) + ')" style="margin-left:6px" ' + (data.number <= 1 ? 'disabled' : '') + '>&larr; Prev</button></div>';
+    h += '<div class="nav-title">Block #' + data.number + '</div>';
+    h += '<div><button class="nav-btn" onclick="showBlockDetail(' + (data.number + 1) + ')" ' + (data.number >= explorerLatestBlock ? 'disabled' : '') + '>Next &rarr;</button></div>';
+    h += '</div>';
+    h += '<div class="row"><span class="key">Hash</span><span class="val" style="font-size:11px">' + data.hash + '</span></div>';
+    h += '<div class="row"><span class="key">Parent Hash</span><span class="val" style="font-size:11px">' + data.parent_hash + '</span></div>';
+    h += '<div class="row"><span class="key">Timestamp</span><span class="val">' + fmtDate(data.timestamp) + '</span></div>';
+    h += '<div class="row"><span class="key">State Root</span><span class="val" style="font-size:11px">' + data.state_root + '</span></div>';
+    h += '<div class="row"><span class="key">Extrinsics Root</span><span class="val" style="font-size:11px">' + data.extrinsics_root + '</span></div>';
+    if (data.author) h += '<div class="row"><span class="key">Miner</span><span class="val" style="font-family:monospace;font-size:12px">' + data.author + '</span></div>';
+    h += '<div class="row"><span class="key">Extrinsics</span><span class="val">' + data.extrinsic_count + '</span></div>';
+    h += '<div class="row"><span class="key">Events</span><span class="val">' + data.event_count + '</span></div>';
+    h += '</div>';
+
+    // Extrinsics
+    if (data.extrinsics && data.extrinsics.length > 0) {
+      h += '<div class="sub-section-title">Extrinsics (' + data.extrinsics.length + ')</div>';
+      h += '<div class="card" style="overflow-x:auto;padding:0"><table><tr><th>#</th><th>Signer</th><th>Call</th><th>Params</th></tr>';
+      for (const ext of data.extrinsics) {
+        const signer = ext.signer || '-';
+        h += '<tr><td>' + ext.index + '</td>'
+          + '<td>' + (signer !== '-' ? shortAddr(signer) : '-') + '</td>'
+          + '<td>' + ext.call_module + '.' + ext.call_function + '</td>'
+          + '<td><div class="attr-panel"><pre>' + JSON.stringify(ext.params, null, 1) + '</pre></div></td></tr>';
+      }
+      h += '</table></div>';
+    }
+
+    // Events
+    if (data.events && data.events.length > 0) {
+      h += '<div class="sub-section-title">Events (' + data.events.length + ')</div>';
+      h += '<div class="card" style="overflow-x:auto;padding:0"><table><tr><th>Module</th><th>Event</th><th>Phase</th><th>Attributes</th></tr>';
+      for (const ev of data.events) {
+        h += '<tr><td>' + ev.module_id + '</td>'
+          + '<td><span class="tag ' + tagClass(ev.event_id.toLowerCase()) + '">' + ev.event_id + '</span></td>'
+          + '<td style="font-size:11px;color:#8b949e">' + ev.phase + '</td>'
+          + '<td><div class="attr-panel"><pre>' + JSON.stringify(ev.attributes, null, 1) + '</pre></div></td></tr>';
+      }
+      h += '</table></div>';
+    }
+    container.innerHTML = h;
+    container.scrollIntoView({ behavior: 'smooth' });
+  } catch (e) { container.innerHTML = '<div class="error">' + e.message + '</div>'; }
+}
+
+function closeBlockDetail() {
+  document.getElementById('blockDetailContainer').innerHTML = '';
+}
+
+function goToBlock(num) {
+  switchTab('explorer');
+  showBlockDetail(num);
+}
+
+function searchAddress(addr) {
+  switchTab('explorer');
+  showExplorerWallet(addr);
+}
+
+async function explorerSearch() {
+  const q = document.getElementById('explorerSearchInput').value.trim();
+  if (!q) return;
+  document.getElementById('explorerError').style.display = 'none';
+  document.getElementById('blockDetailContainer').innerHTML = '';
+  try {
+    const resp = await fetch('/api/explorer/search?q=' + encodeURIComponent(q));
+    const data = await resp.json();
+    if (data.error) { showExplorerError(data.error); return; }
+    if (data.type === 'block') {
+      showBlockDetail(data.value);
+    } else if (data.type === 'address') {
+      // Show wallet info directly in explorer tab
+      showExplorerWallet(data.value);
+    } else if (data.type === 'hash') {
+      if (data.value) {
+        showBlockDetail(data.value);
+      } else {
+        showExplorerError('Hash not found');
+      }
+    }
+  } catch (e) { showExplorerError(e.message); }
+}
+
+async function showExplorerWallet(address) {
+  document.getElementById('blockDetailContainer').innerHTML = '<div class="loading"><div class="spinner"></div><div>Loading wallet...</div></div>';
+  try {
+    const resp = await fetch('/api/wallet/' + encodeURIComponent(address) + '?scan=true');
+    const data = await resp.json();
+    if (data.error) { showExplorerError(data.error); return; }
+    let h = '<div class="card block-header-card">';
+    h += '<div class="nav-bar"><button class="nav-btn" onclick="closeBlockDetail()">&larr; Back</button>';
+    h += '<div class="nav-title">Wallet</div></div>';
+    h += '<div class="address" style="font-size:12px;color:#8b949e;font-family:monospace;word-break:break-all;margin-bottom:12px">' + data.address + '</div>';
+    h += '<div class="balance-row"><span class="balance-big">' + data.free.toFixed(4) + '</span><span class="balance-label">QUIP</span></div>';
+    h += '<div class="stats">';
+    h += '<div class="stat"><div class="label">Total</div><div class="value blue">' + data.total.toFixed(4) + ' QUIP</div></div>';
+    h += '<div class="stat"><div class="label">Reserved</div><div class="value blue">' + data.reserved.toFixed(4) + ' QUIP</div></div>';
+    h += '<div class="stat"><div class="label">Nonce</div><div class="value blue">' + data.nonce + '</div></div>';
+    h += '<div class="stat"><div class="label">Transactions</div><div class="value blue">' + (data.cache && data.cache.transactions ? data.cache.transactions.length : 0) + '</div></div>';
+    h += '</div></div>';
+    const cache = data.cache || {};
+    if (cache.status === 'scanning' || cache.status === 'starting' || cache.status === 'resuming') {
+      h += renderWalletProgress(cache);
+    }
+    const txs = cache.transactions && cache.transactions.length > 0 ? [...cache.transactions].reverse() : [];
+    if (txs.length > 0) {
+      h += '<div class="section-title">Transaction History</div>';
+      h += renderTxFilter(txs);
+      h += renderTxList(txs);
+    } else if (cache.status === 'complete') {
+      h += '<div class="empty">No transactions found for this address</div>';
+    }
+    document.getElementById('blockDetailContainer').innerHTML = h;
+    if (cache.status === 'scanning' || cache.status === 'starting' || cache.status === 'resuming') {
+      if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+      pollTimer = setInterval(() => pollExplorerWallet(address), 2000);
+    }
+  } catch (e) { showExplorerError(e.message); }
+}
+
+async function pollExplorerWallet(addr) {
+  try {
+    const resp = await fetch('/api/scan-status/' + encodeURIComponent(addr));
+    const cache = await resp.json();
+    const container = document.getElementById('blockDetailContainer');
+    if (!container) return;
+    const h = renderWalletProgress(cache);
+    const existing = container.querySelector('.progress-card');
+    if (existing) { existing.outerHTML = h; } else if (h) { container.insertAdjacentHTML('afterbegin', h); }
+    if (cache.transactions && cache.transactions.length > 0) {
+      const txs = [...cache.transactions].reverse();
+      const existingFilter = container.querySelector('.tx-filter');
+      const existingScroll = container.querySelector('.tx-scroll');
+      if (existingFilter) existingFilter.outerHTML = renderTxFilter(txs);
+      if (existingScroll) existingScroll.outerHTML = renderTxList(txs);
+    }
+    if (cache.status === 'complete' || cache.status === 'error') {
+      clearInterval(pollTimer); pollTimer = null;
+    }
+  } catch(e) { console.log(e); }
+}
+document.getElementById('explorerSearchInput').addEventListener('keydown', e => { if (e.key === 'Enter') explorerSearch(); });
+document.getElementById('jumpToBlock').addEventListener('keydown', e => { if (e.key === 'Enter') jumpToBlock(); });
+
+function jumpToBlock() {
+  const val = document.getElementById('jumpToBlock').value.trim();
+  if (!val) return;
+  const num = parseInt(val);
+  if (isNaN(num) || num < 1) { showExplorerError('Invalid block number'); return; }
+  showBlockDetail(num);
+}
+</script>
+</body>
+</html>
