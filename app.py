@@ -174,6 +174,9 @@ def scan_full_history(address, latest_block):
 
         all_raw = cache.get("events", [])
         all_txs = cache.get("transactions", [])
+        if all_raw and not all_txs:
+            all_txs = group_events_into_transactions(all_raw)
+            save_cache(address, {**cache, "transactions": all_txs})
         total = latest_block - start_from + 1
         substrate = SubstrateInterface(url=VALIDATOR_URL)
         try:
@@ -372,7 +375,8 @@ def api_wallet(address):
                 cache["status"] = "resuming"
                 save_cache(address, cache)
             elif cache.get("status") in ("scanning", "resuming", "starting"):
-                pass
+                if address not in _running_scans:
+                    need_scan = True
             else:
                 pass
 
