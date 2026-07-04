@@ -1,4 +1,5 @@
 import os, json, threading, time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from flask import Flask, render_template, jsonify, request
 from substrateinterface import SubstrateInterface
 
@@ -6,6 +7,11 @@ app = Flask(__name__)
 VALIDATOR_URL = os.environ.get("QUIP_VALIDATOR_URL", "http://localhost:20049/rpc")
 CACHE_DIR = os.environ.get("CACHE_DIR", "/tmp/cache")
 _running_scans = set()
+
+# Block data cache (in-memory, expires after 60 seconds)
+_block_cache = {}
+_block_cache_lock = threading.Lock()
+CACHE_TTL = 60
 
 def get_timestamp(substrate, block_num):
     try:
@@ -222,6 +228,14 @@ def decode_params(params):
     return str(params)
 
 def get_block_data(substrate, block_num):
+    # Check cache first
+    cache_key = block_num
+    with _block_cache_lock:
+        if cache_key in _block_cache:
+            cached_data, cached_time = _block_cache[cache_key]
+            if time.time() - cached_time < CACHE_TTL:
+                return cached_data
+
     try:
         block_hash = substrate.get_block_hash(block_num)
         block = substrate.get_block(block_hash)
@@ -252,7 +266,7 @@ def get_block_data(substrate, block_num):
                 "attributes": attrs,
                 "phase": val.get("phase", ""),
             })
-        return {
+        result = {
             "number": block_num,
             "hash": block_hash,
             "parent_hash": header.get("parentHash", ""),
@@ -265,6 +279,10 @@ def get_block_data(substrate, block_num):
             "extrinsics": ext_list,
             "events": event_list,
         }
+        # Cache the result
+        with _block_cache_lock:
+            _block_cache[cache_key] = (result, time.time())
+        return result
     except Exception as e:
         return {"error": str(e)}
 
@@ -297,21 +315,46 @@ def api_explorer_blocks():
         limit = request.args.get("limit", default=20, type=int)
         limit = min(limit, 50)
         _to = max(1, _from - limit + 1)
-        blocks = []
-        for bn in range(_from, _to - 1, -1):
+
+        # Fetch blocks in parallel
+        block_numbers = list(range(_from, _to - 1, -1))
+
+        def fetch_block(bn):
             try:
-                bd = get_block_data(substrate, bn)
+                # Each thread gets its own connection
+                s = SubstrateInterface(url=VALIDATOR_URL)
+                bd = get_block_data(s, bn)
+                s.close()
                 if "error" not in bd:
-                    blocks.append({
+                    return {
                         "number": bd["number"],
                         "hash": bd["hash"],
                         "timestamp": bd["timestamp"],
                         "extrinsic_count": bd["extrinsic_count"],
                         "event_count": bd["event_count"],
                         "author": bd["author"],
-                    })
+                    }
             except:
                 pass
+            return None
+
+        blocks = []
+        with ThreadPoolExecutor(max_workers=5) as executor:
+            futures = {executor.submit(fetch_block, bn): bn for bn in block_numbers}
+            results = {}
+            for future in as_completed(futures):
+                bn = futures[future]
+                try:
+                    result = future.result()
+                    if result:
+                        results[bn] = result
+                except:
+                    pass
+            # Maintain order
+            for bn in block_numbers:
+                if bn in results:
+                    blocks.append(results[bn])
+
         substrate.close()
         return jsonify({"blocks": blocks, "latest": current_block})
     except Exception as e:
