@@ -227,6 +227,36 @@ def decode_params(params):
         return params.value
     return str(params)
 
+def get_block_summary(substrate, block_num):
+    """Lightweight block fetch for the list view - fewer RPC calls."""
+    cache_key = f"summary_{block_num}"
+    with _block_cache_lock:
+        if cache_key in _block_cache:
+            cached_data, cached_time = _block_cache[cache_key]
+            if time.time() - cached_time < CACHE_TTL:
+                return cached_data
+
+    try:
+        block_hash = substrate.get_block_hash(block_num)
+        block = substrate.get_block(block_hash)
+        header = block["header"]
+        extrinsics = block.get("extrinsics", [])
+        ts = get_timestamp(substrate, block_num)
+        # Skip events and author for list view (faster)
+        result = {
+            "number": block_num,
+            "hash": block_hash,
+            "timestamp": ts,
+            "extrinsic_count": len(extrinsics),
+            "event_count": 0,  # Skip for speed
+            "author": None,  # Skip for speed
+        }
+        with _block_cache_lock:
+            _block_cache[cache_key] = (result, time.time())
+        return result
+    except Exception as e:
+        return {"error": str(e)}
+
 def get_block_data(substrate, block_num):
     # Check cache first
     cache_key = block_num
@@ -323,17 +353,11 @@ def api_explorer_blocks():
             try:
                 # Each thread gets its own connection
                 s = SubstrateInterface(url=VALIDATOR_URL)
-                bd = get_block_data(s, bn)
+                # Use lightweight summary for list view
+                bd = get_block_summary(s, bn)
                 s.close()
                 if "error" not in bd:
-                    return {
-                        "number": bd["number"],
-                        "hash": bd["hash"],
-                        "timestamp": bd["timestamp"],
-                        "extrinsic_count": bd["extrinsic_count"],
-                        "event_count": bd["event_count"],
-                        "author": bd["author"],
-                    }
+                    return bd
             except:
                 pass
             return None

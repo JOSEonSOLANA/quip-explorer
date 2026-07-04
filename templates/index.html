@@ -373,7 +373,7 @@ function showExplorerError(msg) {
 
 async function loadBlocks(fromBlock) {
   const container = document.getElementById('blockListContainer');
-  const limit = 15;
+  const limit = 10;
   container.innerHTML = '<div class="loading"><div class="spinner"></div><div>Loading blocks...</div></div>';
   try {
     const resp = await fetch('/api/explorer/blocks?from=' + fromBlock + '&limit=' + limit);
