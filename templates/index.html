@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Quip Explorer</title>
+<title>AGLS Explorer</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0d1117; color: #c9d1d9; padding: 24px; max-width: 1200px; margin: 0 auto; }
@@ -143,17 +143,17 @@
 </head>
 <body>
 <div class="header">
-  <h1>Quip Explorer</h1>
+  <h1>AGLS Explorer</h1>
   <button class="note-btn" onclick="showNote()">NOTE</button>
 </div>
 <div class="modal-overlay" id="noteOverlay" onclick="hideNote()">
   <div class="modal" onclick="event.stopPropagation()">
     <button class="modal-close" onclick="hideNote()">&times;</button>
-    <h2>About Quip Explorer</h2>
-    <p>This explorer queries the Quip Testnet via a public bootnode RPC endpoint.</p>
+    <h2>About AGLS Explorer</h2>
+    <p>This explorer queries the AGLS Testnet via a public bootnode RPC endpoint.</p>
     <p><strong>Wallet Explorer</strong> — search SS58 addresses to view balance and full transaction history. A background scan from block 1 to the latest block runs progressively, showing results as they are found.</p>
     <p><strong>Block Explorer</strong> — browse recent blocks, view extrinsics and events. Click a block number to see its details, extrinsics, and events.</p>
-    <p>Chain: <strong>Quip Testnet</strong> (tQUIP, 12 decimals, SS58 prefix 42)</p>
+    <p>Chain: <strong>AGLS Testnet</strong> (tAGLS, 12 decimals, SS58 prefix 42)</p>
   </div>
 </div>
 <script>
@@ -240,7 +240,7 @@ function renderTxRow(e) {
     + '</div>'
     + (hasSub ? '<div class="sub-events" id="' + tid + '">' + e.sub_events.map(s => '<div class="sub-event-row"><span class="sev-mod">' + s.module_id + '</span>.<span class="sev-evt">' + s.event_id + '</span></div>').join('') + '</div>' : '')
     + '</div>'
-    + '<div class="tx-amount ' + cls + '">' + sign + (val !== null ? val.toFixed(4) : '') + (val !== null ? ' QUIP' : '') + '</div>'
+    + '<div class="tx-amount ' + cls + '">' + sign + (val !== null ? val.toFixed(4) : '') + (val !== null ? ' AGLS' : '') + '</div>'
     + '</div>';
 }
 
@@ -277,10 +277,10 @@ function renderTxList(events) {
 
 function renderWalletView(data) {
   let h = '<div class="card"><div class="address">' + data.address + '</div>';
-  h += '<div class="balance-row"><span class="balance-big">' + data.free.toFixed(4) + '</span><span class="balance-label">QUIP</span></div>';
+  h += '<div class="balance-row"><span class="balance-big">' + data.free.toFixed(4) + '</span><span class="balance-label">AGLS</span></div>';
   h += '<div class="stats">';
-  h += '<div class="stat"><div class="label">Total</div><div class="value blue">' + data.total.toFixed(4) + ' QUIP</div></div>';
-  h += '<div class="stat"><div class="label">Reserved</div><div class="value blue">' + data.reserved.toFixed(4) + ' QUIP</div></div>';
+  h += '<div class="stat"><div class="label">Total</div><div class="value blue">' + data.total.toFixed(4) + ' AGLS</div></div>';
+  h += '<div class="stat"><div class="label">Reserved</div><div class="value blue">' + data.reserved.toFixed(4) + ' AGLS</div></div>';
   h += '<div class="stat"><div class="label">Nonce</div><div class="value blue">' + data.nonce + '</div></div>';
   h += '<div class="stat"><div class="label">Transactions</div><div class="value blue">' + (data.cache && data.cache.transactions ? data.cache.transactions.length : 0) + '</div></div>';
   h += '</div></div>';
@@ -358,7 +358,7 @@ async function loadExplorer() {
     if (status.error) { showExplorerError(status.error); return; }
     explorerLatestBlock = status.finalised_block;
     let h = '<div class="status-bar">';
-    h += '<div class="status-item"><div class="lbl">Chain</div><div class="val">' + (status.chain || status.name || 'Quip') + '</div></div>';
+    h += '<div class="status-item"><div class="lbl">Chain</div><div class="val">' + (status.chain || status.name || 'AGLS') + '</div></div>';
     h += '<div class="status-item"><div class="lbl">Latest Block</div><div class="val">#' + status.finalised_block.toLocaleString() + '</div></div>';
     h += '</div>';
     document.getElementById('statusBar').innerHTML = h;
@@ -511,10 +511,10 @@ async function showExplorerWallet(address) {
     h += '<div class="nav-bar"><button class="nav-btn" onclick="closeBlockDetail()">&larr; Back</button>';
     h += '<div class="nav-title">Wallet</div></div>';
     h += '<div class="address" style="font-size:12px;color:#8b949e;font-family:monospace;word-break:break-all;margin-bottom:12px">' + data.address + '</div>';
-    h += '<div class="balance-row"><span class="balance-big">' + data.free.toFixed(4) + '</span><span class="balance-label">QUIP</span></div>';
+    h += '<div class="balance-row"><span class="balance-big">' + data.free.toFixed(4) + '</span><span class="balance-label">AGLS</span></div>';
     h += '<div class="stats">';
-    h += '<div class="stat"><div class="label">Total</div><div class="value blue">' + data.total.toFixed(4) + ' QUIP</div></div>';
-    h += '<div class="stat"><div class="label">Reserved</div><div class="value blue">' + data.reserved.toFixed(4) + ' QUIP</div></div>';
+    h += '<div class="stat"><div class="label">Total</div><div class="value blue">' + data.total.toFixed(4) + ' AGLS</div></div>';
+    h += '<div class="stat"><div class="label">Reserved</div><div class="value blue">' + data.reserved.toFixed(4) + ' AGLS</div></div>';
     h += '<div class="stat"><div class="label">Nonce</div><div class="value blue">' + data.nonce + '</div></div>';
     h += '<div class="stat"><div class="label">Transactions</div><div class="value blue">' + (data.cache && data.cache.transactions ? data.cache.transactions.length : 0) + '</div></div>';
     h += '</div></div>';
